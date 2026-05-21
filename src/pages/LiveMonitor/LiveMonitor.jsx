@@ -1,75 +1,70 @@
 import { useAttendanceContext } from '../../context/AttendanceContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useWebSocket } from '../../hooks/useWebSocket';
-import { DataTable } from '../../components/table/DataTable';
-import { StatCard } from '../../components/stats/StatCard';
 import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
-import { Users, UserCheck, Clock, UserX, Wifi, WifiOff } from 'lucide-react';
-import { useState } from 'react';
-
-const columns = [
-  { header: 'Roll No', accessor: 'roll' },
-  { header: 'Name', accessor: 'name' },
-  {
-    header: 'Status',
-    accessor: 'status',
-    cell: (row) => <Badge status={row.status}>{row.status}</Badge>,
-  },
-  { header: 'Time', accessor: 'time', cell: (row) => row.time || '—' },
-];
+import { WifiOff } from 'lucide-react';
+import SessionSelector from './components/SessionSelector';
+import LiveTable from './components/LiveTable';
+import TapSimulator from './components/TapSimulator';
+import { StatCard } from '../../components/stats/StatCard';
+import { Users, UserCheck, Clock, UserX, Wifi } from 'lucide-react';
 
 export default function LiveMonitor() {
   const { activeSession, liveRecords, stats, recordTap, isSessionActive } =
     useAttendanceContext();
   const { addNotification } = useNotifications();
   const { isConnected } = useWebSocket(activeSession?.id);
-  const [simulateRoll, setSimulateRoll] = useState('');
-
-  const handleSimulateTap = () => {
-    if (!simulateRoll) return;
-    const mockStudent = {
-      roll: simulateRoll,
-      name: `Student ${simulateRoll}`,
-      status: 'present',
-      time: new Date().toLocaleTimeString(),
-    };
-    recordTap(mockStudent);
-    addNotification({
-      type: 'tap',
-      message: `${mockStudent.name} tapped in for ${activeSession?.courseCode}`,
-    });
-    setSimulateRoll('');
-  };
 
   if (!isSessionActive) {
     return (
-      <Card className="text-center py-12">
-        <WifiOff className="mx-auto text-muted mb-2" size={32} />
-        <p className="text-muted">No active session. Start a session from the Sessions page.</p>
-      </Card>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+        <div className="glass-card text-center" style={{ maxWidth: 420, width: '100%' }}>
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 'var(--radius-xl)',
+              background: '#EFF6FF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto var(--space-4)',
+            }}
+          >
+            <WifiOff size={28} color="var(--primary)" />
+          </div>
+          <h3 style={{ fontWeight: 700, fontSize: '1.125rem', color: 'var(--text-primary)', marginBottom: 8 }}>
+            No Active Session
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+            Go to the <strong style={{ color: 'var(--primary)' }}>Sessions</strong> page to start a session and begin tracking attendance in real time.
+          </p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center flex-wrap gap-3">
+    <div className="space-y-6 page-content">
+      {/* ── Page header ─────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gradient">Live Monitor</h1>
-          <p className="text-secondary text-sm mt-1">
-            {activeSession?.course} • {activeSession?.room} • {activeSession?.date}
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            Live Monitor
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: 4 }}>
+            {activeSession?.course} &nbsp;·&nbsp; {activeSession?.room} &nbsp;·&nbsp; {activeSession?.date}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {isConnected ? (
-            <div className="flex items-center gap-2 text-success text-sm">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--success)', fontSize: '0.8125rem', fontWeight: 500 }}>
               <Wifi size={14} />
-              <span>Real‑time connected</span>
+              <span>Real-time connected</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-muted text-sm">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
               <WifiOff size={14} />
               <span>Mock mode</span>
             </div>
@@ -77,49 +72,39 @@ export default function LiveMonitor() {
           <div className="badge-live">
             <span className="pulse-dot" />
             <span>LIVE</span>
+            {activeSession?.courseCode && (
+              <span style={{ fontWeight: 400, fontSize: '0.75rem' }}>{activeSession.courseCode}</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Stat cards — minmax so they never overflow on narrow viewports */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: 'var(--space-4, 1rem)',
-        }}
-      >
-        <StatCard title="Present"  value={stats.present}  icon={UserCheck} color="success"  />
-        <StatCard title="Late"     value={stats.late}     icon={Clock}     color="warning"  />
-        <StatCard title="Absent"   value={stats.absent}   icon={UserX}     color="danger"   />
-        <StatCard title="Enrolled" value={stats.enrolled} icon={Users}     color="primary"  />
+      {/* ── Stat cards ──────────────────────────────── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: 'var(--space-4)',
+      }}>
+        <StatCard title="Present"  value={stats.present}  icon={UserCheck} color="success" />
+        <StatCard title="Late"     value={stats.late}     icon={Clock}     color="warning" />
+        <StatCard title="Absent"   value={stats.absent}   icon={UserX}     color="danger"  />
+        <StatCard title="Enrolled" value={stats.enrolled} icon={Users}     color="primary" />
       </div>
 
-      {/* Live records table */}
-      <Card variant="default" className="p-0 overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={liveRecords}
-          emptyMessage="No taps yet. Waiting for students…"
-        />
-      </Card>
+      {/* ── Live table ───────────────────────────────── */}
+      <LiveTable records={liveRecords} />
 
-      {/* Simulate tap */}
-      <Card variant="sm" className="flex gap-4 items-end">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Roll number (e.g., S001)"
-            className="input"
-            value={simulateRoll}
-            onChange={(e) => setSimulateRoll(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSimulateTap()}
-          />
-        </div>
-        <Button onClick={handleSimulateTap} disabled={!simulateRoll}>
-          Simulate Tap
-        </Button>
-      </Card>
+      {/* ── Simulate tap ─────────────────────────────── */}
+      <TapSimulator
+        activeSession={activeSession}
+        onTap={(student) => {
+          recordTap(student);
+          addNotification({
+            type: 'tap',
+            message: `${student.name} tapped in for ${activeSession?.courseCode}`,
+          });
+        }}
+      />
     </div>
   );
 }
