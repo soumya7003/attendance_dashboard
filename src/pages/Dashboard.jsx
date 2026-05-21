@@ -746,7 +746,7 @@ function Settings() {
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
-export default function App() {
+export default function Dashboard() {
   const [page, setPage] = useState("live");
   const { toasts, add: toast } = useToast();
 
