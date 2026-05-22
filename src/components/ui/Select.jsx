@@ -2,14 +2,19 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { ChevronDown } from 'lucide-react';
 
-export const Select = ({ label, options, value, onChange, error, placeholder, className = '', ...props }) => {
+const Select = ({ label, options = [], value, onChange, error, placeholder, className = '', ...props }) => {
+
+  const handleChange = (e) => {
+    onChange?.(e.target.value);
+  };
+
   return (
     <div className="input-wrapper">
       {label && <label className="input-label">{label}</label>}
       <div className="relative">
         <select
           value={value}
-          onChange={onChange}
+          onChange={handleChange}
           className={`input appearance-none ${error ? 'input-error' : ''} ${className}`}
           {...props}
         >
@@ -20,7 +25,10 @@ export const Select = ({ label, options, value, onChange, error, placeholder, cl
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted" size={16} />
+        <ChevronDown
+          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted"
+          size={16}
+        />
       </div>
       {error && <div className="input-hint error">{error}</div>}
     </div>
@@ -36,3 +44,6 @@ Select.propTypes = {
   placeholder: PropTypes.string,
   className: PropTypes.string,
 };
+
+export { Select };
+export default Select;
