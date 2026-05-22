@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Suspense, lazy } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
@@ -31,3 +32,10 @@ function App() {
 }
 
 export default App;
+=======
+import AppRouter from './routes/AppRouter.jsx'
+
+export default function App() {
+  return <AppRouter />
+}
+>>>>>>> aa3a4ba6a433ca7f7d2f915da5b18db865688e0a

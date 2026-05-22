@@ -1,222 +1,118 @@
-import { useState, useCallback, useRef } from 'react';
-
-// ─── Hook ──────────────────────────────────────────────────────────────────────
+import { useState } from 'react';
 import { useCourses } from '../../hooks/useCourses';
+import { DataTable } from '../../components/table/DataTable';
+import { FilterBar } from '../../components/filters/FilterBar';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Modal } from '../../components/ui/Modal';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog';
 
-// ─── Page sub-components ───────────────────────────────────────────────────────
-import CourseTable    from './components/CourseTable';
-import AddCourseModal from './components/AddCourseModal';
-
-// ─── Shared primitives ────────────────────────────────────────────────────────
-import Button          from '../../components/ui/Button';
-import Card            from '../../components/ui/Card';
-import Input           from '../../components/ui/Input';
-import Select          from '../../components/ui/Select';
-import FilterBar       from '../../components/filters/FilterBar';
-import FilterChips     from '../../components/filters/FilterChips';
-import LoadingSpinner  from '../../components/shared/LoadingSpinner';
-import EmptyState      from '../../components/shared/EmptyState';
-import ErrorFallback   from '../../components/shared/ErrorFallback';
-
-// ─── Constants ─────────────────────────────────────────────────────────────────
-const DEPARTMENT_OPTIONS = [
-  { label: 'All Departments', value: '' },
-  { label: 'Science',             value: 'Science' },
-  { label: 'Arts',                value: 'Arts' },
-  { label: 'Engineering',         value: 'Engineering' },
-  { label: 'Commerce',            value: 'Commerce' },
-  { label: 'Mathematics',         value: 'Mathematics' },
-  { label: 'Computer Science',    value: 'Computer Science' },
-  { label: 'Information Technology', value: 'Information Technology' },
-  { label: 'Electronics',         value: 'Electronics' },
-  { label: 'Mechanical',          value: 'Mechanical' },
-  { label: 'Civil',               value: 'Civil' },
+const columns = [
+  { header: 'Code', accessor: 'code' },
+  { header: 'Course Name', accessor: 'name' },
+  { header: 'Department', accessor: 'department' },
+  { header: 'Enrolled', accessor: 'enrolled' },
+  {
+    header: 'Actions',
+    accessor: 'id',
+    cell: (row, onEdit, onDelete) => (
+      <div className="flex gap-2">
+        <button onClick={() => onEdit(row)} className="text-primary hover:text-primary/80">
+          <Edit size={16} />
+        </button>
+        <button onClick={() => onDelete(row)} className="text-danger hover:text-danger/80">
+          <Trash2 size={16} />
+        </button>
+      </div>
+    ),
+  },
 ];
 
-const EMPTY_FILTERS = { department: '', minEnrolled: '', maxEnrolled: '' };
-
-// Debounce delay (ms) for number inputs to avoid spamming the API.
-const DEBOUNCE_MS = 400;
-
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-/**
- * Build the list of active filter chips from current filter state.
- * Each chip has: { key, label, value }
- */
-function buildChips(filters) {
-  const chips = [];
-  if (filters.department)  chips.push({ key: 'department',  label: `Dept: ${filters.department}` });
-  if (filters.minEnrolled) chips.push({ key: 'minEnrolled', label: `Min Enrolled: ${filters.minEnrolled}` });
-  if (filters.maxEnrolled) chips.push({ key: 'maxEnrolled', label: `Max Enrolled: ${filters.maxEnrolled}` });
-  return chips;
-}
-
-// ─── Component ─────────────────────────────────────────────────────────────────
 export default function Courses() {
-  const { courses, loading, error, refetch } = useCourses();
+  const { courses, loading, addCourse, updateCourse, deleteCourse } = useCourses();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [formData, setFormData] = useState({ code: '', name: '', department: '' });
 
-  const [showFilters, setShowFilters] = useState(false);
-  const [showModal,   setShowModal]   = useState(false);
-  const [filters,     setFilters]     = useState(EMPTY_FILTERS);
-
-  // Debounce timer ref for number inputs.
-  const debounceTimer = useRef(null);
-
-  // ─── Filter helpers ─────────────────────────────────────────────────────────
-  const applyFilters = useCallback((nextFilters) => {
-    refetch(nextFilters);
-  }, [refetch]);
-
-  const handleFilterChange = useCallback((field, value) => {
-    const next = { ...filters, [field]: value };
-    setFilters(next);
-
-    const isNumber = field === 'minEnrolled' || field === 'maxEnrolled';
-    if (isNumber) {
-      // Debounce number inputs.
-      clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => applyFilters(next), DEBOUNCE_MS);
+  const handleOpenModal = (course = null) => {
+    if (course) {
+      setEditingCourse(course);
+      setFormData({ code: course.code, name: course.name, department: course.department });
     } else {
-      // Apply immediately for selects.
-      applyFilters(next);
+      setEditingCourse(null);
+      setFormData({ code: '', name: '', department: '' });
     }
-  }, [filters, applyFilters]);
+    setModalOpen(true);
+  };
 
-  const removeFilter = useCallback((key) => {
-    const next = { ...filters, [key]: '' };
-    setFilters(next);
-    applyFilters(next);
-  }, [filters, applyFilters]);
+  const handleSubmit = async () => {
+    if (editingCourse) {
+      await updateCourse(editingCourse.id, formData);
+    } else {
+      await addCourse(formData);
+    }
+    setModalOpen(false);
+  };
 
-  const clearFilters = useCallback(() => {
-    setFilters(EMPTY_FILTERS);
-    applyFilters(EMPTY_FILTERS);
-  }, [applyFilters]);
+  const handleDelete = async () => {
+    if (deleteTarget) {
+      await deleteCourse(deleteTarget.id);
+      setDeleteTarget(null);
+    }
+  };
 
-  // ─── Course added ────────────────────────────────────────────────────────────
-  const handleCourseAdded = useCallback(() => {
-    refetch(filters);
-  }, [refetch, filters]);
-
-  // ─── Derived ─────────────────────────────────────────────────────────────────
-  const chips = buildChips(filters);
-  const hasActiveFilters = chips.length > 0;
-
-  // ─── Render helpers ──────────────────────────────────────────────────────────
-
-  // Full-page loading
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  // Full-page error
-  if (error) {
-    return (
-      <ErrorFallback
-        message={error.message || 'Failed to load courses.'}
-        onRetry={() => refetch(filters)}
-      />
-    );
-  }
-
-  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div>
-
-      {/* ── Page header ── */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Courses</h1>
-
-        <Button onClick={() => setShowModal(true)}>
-          + Add Course
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gradient">Courses</h1>
+          <p className="text-secondary text-sm mt-1">Manage course catalogue</p>
+        </div>
+        <Button onClick={() => handleOpenModal()} icon={Plus}>
+          Add Course
         </Button>
       </div>
 
-      {/* ── Filter toggle + active chips ── */}
-      <div className="flex flex-wrap gap-2 mb-3 items-center">
-        <Button
-          variant="outline"
-          onClick={() => setShowFilters((v) => !v)}
-          aria-expanded={showFilters}
-          aria-controls="courses-filter-bar"
-        >
-          {showFilters ? '🔼 Hide Filters' : '🔽 Filters'}
-        </Button>
+      <FilterBar>
+        <input type="text" placeholder="Search courses..." className="input h-9 w-64 text-sm" />
+      </FilterBar>
 
-        {/* Active filter chips */}
-        {hasActiveFilters && (
-          <FilterChips
-            chips={chips}
-            onRemove={(chip) => removeFilter(chip.key)}
-            onClearAll={clearFilters}
-          />
-        )}
-      </div>
-
-      {/* ── Collapsible filter bar ── */}
-      {showFilters && (
-        <FilterBar id="courses-filter-bar">
-
-          <Select
-            label="Department"
-            value={filters.department}
-            onChange={(v) => handleFilterChange('department', v)}
-            options={DEPARTMENT_OPTIONS}
-          />
-
-          <Input
-            label="Min Enrolled"
-            type="number"
-            min={0}
-            placeholder="e.g. 10"
-            value={filters.minEnrolled}
-            onChange={(v) => handleFilterChange('minEnrolled', v)}
-          />
-
-          <Input
-            label="Max Enrolled"
-            type="number"
-            min={0}
-            placeholder="e.g. 100"
-            value={filters.maxEnrolled}
-            onChange={(v) => handleFilterChange('maxEnrolled', v)}
-          />
-
-          <Button variant="outline" onClick={clearFilters}>
-            Clear All
-          </Button>
-
-        </FilterBar>
-      )}
-
-      {/* ── Course table (empty state handled inside) ── */}
-      {courses.length === 0 ? (
-        <EmptyState
-          title="No courses found"
-          subtitle="Create your first course to get started."
-          action={
-            <Button onClick={() => setShowModal(true)}>
-              + Add Course
-            </Button>
-          }
+      <Card variant="default" className="p-0 overflow-hidden">
+        <DataTable
+          columns={columns.map(col => ({
+            ...col,
+            cell: col.accessor === 'id' 
+              ? (row) => col.cell(row, handleOpenModal, setDeleteTarget)
+              : col.cell
+          }))}
+          data={courses}
+          loading={loading}
+          emptyMessage="No courses found"
         />
-      ) : (
-        <Card>
-          <CourseTable data={courses} />
-        </Card>
-      )}
+      </Card>
 
-      {/* ── Add Course modal ── */}
-      <AddCourseModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={handleCourseAdded}
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingCourse ? 'Edit Course' : 'Add Course'}>
+        <div className="space-y-4">
+          <Input label="Course Code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} />
+          <Input label="Course Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+          <Input label="Department" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} />
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmit}>{editingCourse ? 'Update' : 'Create'}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Course"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
       />
-
     </div>
   );
 }

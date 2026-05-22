@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext(null);
@@ -40,3 +41,41 @@ export const useTheme = () => {
   }
   return context;
 };
+=======
+import { createContext, useContext, useState, useEffect } from "react";
+
+const ThemeContext = createContext(null);
+
+export function ThemeProvider({ children }) {
+  const [isDark, setIsDark] = useState(() => {
+    const stored = localStorage.getItem("attendify-theme");
+    return stored ? stored === "dark" : true; // default: dark
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    } else {
+      root.classList.add("light");
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("attendify-theme", isDark ? "dark" : "light");
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark((prev) => !prev);
+
+  return (
+    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
+  return ctx;
+}
+>>>>>>> aa3a4ba6a433ca7f7d2f915da5b18db865688e0a

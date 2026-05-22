@@ -1,54 +1,53 @@
-import api from './api';
+// Mock data
+const MOCK_COURSES = [
+  { id: 'crs_001', code: 'CS101', name: 'Introduction to Computer Science', department: 'Computer Science', enrolled: 32 },
+  { id: 'crs_002', code: 'MATH202', name: 'Calculus II', department: 'Mathematics', enrolled: 28 },
+  { id: 'crs_003', code: 'PHY301', name: 'Physics for Engineers', department: 'Physics', enrolled: 24 },
+  { id: 'crs_004', code: 'ENG105', name: 'Academic Writing', department: 'English', enrolled: 30 },
+];
 
-/**
- * courseService
- * Thin wrapper around the Axios instance for /api/courses.
- * Auth token is automatically injected by the Axios interceptor in api.js.
- */
+let courses = [...MOCK_COURSES];
+
 const courseService = {
-  /**
-   * GET /api/courses
-   * @param {Object} filters  - { department?, minEnrolled?, maxEnrolled? }
-   * @param {Object} options  - Axios extras (e.g. { signal } for AbortController)
-   * @returns {Promise<Array>}
-   */
-  getAll: async (filters = {}, options = {}) => {
-    // Strip undefined / empty string values so they don't pollute query params.
-    const params = Object.fromEntries(
-      Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined && v !== null)
-    );
-    const res = await api.get('/courses', { params, ...options });
-    return res.data;
+  async getCourses(params = {}) {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    let filtered = [...courses];
+    if (params.department) {
+      filtered = filtered.filter((c) => c.department === params.department);
+    }
+    if (params.minEnrolled) {
+      filtered = filtered.filter((c) => c.enrolled >= params.minEnrolled);
+    }
+    if (params.search) {
+      const searchLower = params.search.toLowerCase();
+      filtered = filtered.filter(
+        (c) =>
+          c.code.toLowerCase().includes(searchLower) ||
+          c.name.toLowerCase().includes(searchLower)
+      );
+    }
+    return { data: filtered };
   },
 
-  /**
-   * POST /api/courses
-   * @param {{ code: string, name: string, department: string }} payload
-   * @returns {Promise<Object>} newly created course
-   */
-  create: async (payload) => {
-    const res = await api.post('/courses', payload);
-    return res.data;
+  async addCourse(courseData) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const newCourse = { id: `crs_${Date.now()}`, ...courseData, enrolled: 0 };
+    courses.push(newCourse);
+    return { data: newCourse };
   },
 
-  /**
-   * PUT /api/courses/:id
-   * @param {string} id
-   * @param {Object} payload
-   * @returns {Promise<Object>} updated course
-   */
-  update: async (id, payload) => {
-    const res = await api.put(`/courses/${id}`, payload);
-    return res.data;
+  async updateCourse(id, updatedData) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const index = courses.findIndex((c) => c.id === id);
+    if (index === -1) throw new Error('Course not found');
+    courses[index] = { ...courses[index], ...updatedData };
+    return { data: courses[index] };
   },
 
-  /**
-   * DELETE /api/courses/:id
-   * @param {string} id
-   * @returns {Promise<void>}
-   */
-  remove: async (id) => {
-    await api.delete(`/courses/${id}`);
+  async deleteCourse(id) {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    courses = courses.filter((c) => c.id !== id);
+    return { success: true };
   },
 };
 
