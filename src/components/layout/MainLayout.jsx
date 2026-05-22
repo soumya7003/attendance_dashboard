@@ -1,21 +1,9 @@
 import { Outlet } from 'react-router-dom';
-<<<<<<< HEAD
-=======
 import { useState, useEffect } from 'react';
->>>>>>> aa3a4ba6a433ca7f7d2f915da5b18db865688e0a
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 
 export default function MainLayout() {
-<<<<<<< HEAD
-  return (
-    <div className="flex min-h-screen bg-[#0B1120] text-white">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Topbar />
-        <main className="p-6 flex-1">
-          <Outlet />
-=======
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024);
@@ -93,7 +81,6 @@ export default function MainLayout() {
           <div style={{ maxWidth: 'var(--content-max-width)', margin: '0 auto' }}>
             <Outlet />
           </div>
->>>>>>> aa3a4ba6a433ca7f7d2f915da5b18db865688e0a
         </main>
       </div>
     </div>
